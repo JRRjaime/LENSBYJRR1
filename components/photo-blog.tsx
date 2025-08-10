@@ -34,8 +34,8 @@ import {
   ExternalLink,
   Mail,
   Instagram,
+  Trash2,
 } from "lucide-react"
-
 import type { Comment, Photo } from "@/lib/data"
 import { categories, getAllTags, getMorePhotos, initialPhotos } from "@/lib/data"
 import ReactionBar from "@/components/reaction-bar"
@@ -45,7 +45,7 @@ import ShareButtons from "@/components/share-buttons"
 import { donation } from "@/lib/config"
 import { submitContact, type ContactActionState } from "@/app/actions/contact"
 import { useToast } from "@/hooks/use-toast"
-import { savePhotoWithBlob, loadAllPhotos, updatePhotoData, type StoredPhotoData } from "@/lib/storage"
+import { savePhotoWithBlob, loadAllPhotos, updatePhotoData, removePhoto, type StoredPhotoData } from "@/lib/storage"
 
 const CONTACT_EMAIL = "jrrfotografia20004@gmail.com"
 const iconMap = { Camera, Plane, Flower2, Church, Mountain, Building2 }
@@ -97,7 +97,18 @@ export function PhotoBlog() {
     )
   }, [photos, selectedCategory, query, selectedTags])
 
-  // Lightbox
+  
+  // Eliminar publicación localmente (IndexedDB + UI)
+  const handleDelete = async (photoId: string) => {
+    if (!confirm("¿Eliminar esta publicación?")) return
+    try {
+      await removePhoto(photoId) // elimina de IndexedDB si existe
+    } catch (_) {
+      // ignorar si no estaba persistida
+    }
+    setPhotos((arr) => arr.filter((p) => p.id !== photoId)) // quita de la UI
+  }
+// Lightbox
   const [lightboxOpen, setLightboxOpen] = useState(false)
   const [lightboxIndex, setLightboxIndex] = useState(0)
   const lightboxImages = useMemo(() => filteredPhotos.map((p) => ({ src: p.imageUrl, alt: p.title })), [filteredPhotos])
@@ -525,6 +536,15 @@ export function PhotoBlog() {
                   <Card className="overflow-hidden bg-white/90 backdrop-blur-sm shadow-2xl hover:shadow-3xl transition-all duration-500 hover:-translate-y-1 border-2 border-purple-100">
                     <CardContent className="p-0">
                       <div className="relative group">
+                        {/* Botón eliminar */}
+                        <button
+                          onClick={() => handleDelete(photo.id)}
+                          className="absolute right-3 top-3 z-10 rounded-lg bg-red-600 text-white px-3 py-1 text-sm shadow hover:bg-red-700 active:scale-95 focus:outline-none focus:ring-2 focus:ring-red-300"
+                          title="Eliminar publicación"
+                          aria-label="Eliminar publicación"
+                        >
+                          Eliminar
+                        </button>
                         <Image
                           src={photo.imageUrl || "/placeholder.svg"}
                           alt={photo.title}
